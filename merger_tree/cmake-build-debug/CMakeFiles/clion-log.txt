@@ -1,0 +1,4 @@
+/Applications/CLion.app/Contents/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /Users/caojunzhi/Desktop/NYU/Laboratory/My_code/2017.4_9_cosmology/src/merger_tree
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /Users/caojunzhi/Desktop/NYU/Laboratory/My_code/2017.4_9_cosmology/src/merger_tree/cmake-build-debug
