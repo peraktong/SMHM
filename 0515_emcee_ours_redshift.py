@@ -584,10 +584,10 @@ def lnprior(theta):
 
     f0, zc, sigmaz, alphaz = theta
 
-    if 0 < f0 < 2 and 0 < zc < 5 and 0 < sigmaz < 5 and 0 < alphaz < 5:
+    if 0.1 < f0 < 0.5 and 2.5 < zc < 5 and 0.8 < sigmaz < 3 and 2 < alphaz < 5.5:
         return 0.0
     return -np.inf
-a
+
 # The final ln posterior probability is the sum of the ln prior and ln likelihood
 
 def lnprob(theta, x, y):
@@ -628,6 +628,12 @@ kwargs["alphaz"] = alphaz
 output = open('EMCEE_redshift_M13_scipy.pkl', 'wb')
 pickle.dump(result["x"], output)
 output.close()
+
+
+output = open('kwargs_redshift.pkl', 'wb')
+pickle.dump(kwargs, output)
+output.close()
+
 
 
 ###

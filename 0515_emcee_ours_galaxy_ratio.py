@@ -228,7 +228,7 @@ class MCMC():
         trans = 0.05
 
         # Only use 100 halos for now. Make it quicker
-        n_halo = 100
+        n_halo = 300
 
         # result all is z + Mass_stellar
 
@@ -584,10 +584,10 @@ def lnprior(theta):
 
     f0, zc, sigmaz, alphaz = theta
 
-    if 0 < f0 < 3 and 0 < zc < 8 and 0 < sigmaz < 5 and 0 < alphaz < 5:
+    if 0 < f0 < 2 and 0 < zc < 5 and 0 < sigmaz < 5 and 0 < alphaz < 5:
         return 0.0
     return -np.inf
-
+a
 # The final ln posterior probability is the sum of the ln prior and ln likelihood
 
 def lnprob(theta, x, y):
@@ -625,6 +625,10 @@ kwargs["zc"] = zc
 kwargs["sigmaz"] = sigmaz
 kwargs["alphaz"] = alphaz
 
+output = open('EMCEE_redshift_M13_scipy.pkl', 'wb')
+pickle.dump(result["x"], output)
+output.close()
+
 
 ###
 
@@ -633,7 +637,7 @@ print("doing emcee")
 
 # Define the initial condition of the MCMC chain: Position/initial values
 
-ndim, nwalkers = 4, 50
+ndim, nwalkers = 4, 40
 
 # Or you can replace result["x"] with your initial values
 # pos = [result["x"] + 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
@@ -659,7 +663,7 @@ for result in sampler.sample(pos, iterations=500, storechain=False):
 
 """
 print("running MCMC")
-sampler.run_mcmc(pos, 500)
+sampler.run_mcmc(pos, 200)
 
 # Now we have an array with dimension of 100*500*3: 100 walkers, 500 steps and 3 parameters
 

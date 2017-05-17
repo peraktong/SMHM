@@ -24,6 +24,10 @@ pkl_file = open('EMCEE_redshift_M13.pkl', 'rb')
 emcee = pickle.load(pkl_file)
 pkl_file.close()
 
+pkl_file = open('EMCEE_redshift_M13_scipy.pkl', 'rb')
+scipy_result = pickle.load(pkl_file)
+pkl_file.close()
+
 # Only choose resultf form steps after 50
 samples = emcee[:, 50:, :].reshape((-1, 4))
 
@@ -32,12 +36,12 @@ f0,zc,sigmaz,alphaz = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
                              zip(*np.percentile(samples, [16, 50, 84],
                                                 axis=0)))
 
+"""
+
 f0 = np.median(f0)
 zc = np.median(zc)
 sigmaz = np.median(sigmaz)
 alphaz = np.median(alphaz)
-
-"""
 
 # [ 0.88009791  3.34350292  1.63356693  1.00601424]
 
@@ -58,13 +62,17 @@ kwargs["alphaz"] = alphaz
 
 """
 
+## Use scipy results! Because they are best fit model!
+
+
+f0,zc,sigmaz,alphaz = scipy_result
+
 
 
 kwargs["f0"] = f0
 kwargs["zc"] = zc
 kwargs["sigmaz"] = sigmaz
 kwargs["alphaz"] = alphaz
-
 
 
 
@@ -241,7 +249,7 @@ class read_and_plot():
         matplotlib.rc('font', **font)
 
         trans = 0.05
-        n_halo = 100
+        n_halo = 300
 
         data_path = ori + index + "/"
 
@@ -496,13 +504,13 @@ class read_and_plot():
         plt.legend()
 
         # save it:
-        plt.suptitle("$log[M_*]\quad vs\quad scale \quad factor$")
+        plt.suptitle("$log[M_*]\quad vs\quad scale \quad factor\quad redshift-quenching$")
 
         plt.xlabel("$Scale\quad factor\quad a$")
         plt.ylabel("$log[M_*]\quad (dex)$", fontsize=20)
 
 
-        """
+
            
         
         axes = plt.gca()
@@ -511,7 +519,7 @@ class read_and_plot():
         
    
         
-        """
+
 
         # share x axis
 
@@ -554,6 +562,8 @@ class diagnostic():
 
         matplotlib.rc('font', **font)
 
+
+
         for i in range(0,n_parameter):
 
 
@@ -565,23 +575,16 @@ class diagnostic():
 
                 plt.plot(chain[j,:,i],"k",linewidth=0.7, alpha=alpha)
 
-            plt.xlabel("Step")
+
             plt.ylabel("%s" % name[i], fontsize=20)
 
-
-            
-        axes = plt.gca()
-        axes.set_xlim([15660, 15780])
-
-            
-
-
+        plt.xlabel("Step")
         plt.legend()
 
         plt.suptitle("The values of walkers vs step", fontsize=20)
 
         # share x
-        plt.subplots_adjust(hspace=.0)
+        plt.subplots_adjust(hspace=.5)
 
         # plt.show()
         # save them:
@@ -607,7 +610,7 @@ class diagnostic():
                             truths=[f0,zc,sigmaz,alphaz])
 
 
-        fig.savefig(self.save_path+"triangle.png")
+        fig.savefig(self.save_path+"redshift_triangle.png")
 
 ## Output:
 
