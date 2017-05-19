@@ -12,13 +12,6 @@ import scipy.optimize as op
 
 
 
-ori = "/Users/caojunzhi/Desktop/NYU/Laboratory/My_code/Cosmology_2017.4-8_Jason/"
-
-data_path = ori + "M13" + "/"
-
-plot_path = "/Users/caojunzhi/Downloads/upload_2017.5.1_Jeremy/"
-
-
 def log10(x):
     if x > 0:
         return math.log10(x)
@@ -28,9 +21,8 @@ def log10(x):
 
 ori = "/Users/caojunzhi/Desktop/NYU/Laboratory/My_code/Cosmology_2017.4-8_Jason/"
 
-data_path = ori + "M13" + "/"
+data_path = ori + "M12" + "/"
 
-plot_path = "/Users/caojunzhi/Downloads/upload_2017.5.1_Jeremy/"
 
 
 def log10(x):
@@ -74,11 +66,11 @@ def exp(x):
 
 exp = np.vectorize(exp)
 
-# use M13, read data
+# use M12, read data
 
 
-pkl_file = open('B_M13.pkl', 'rb')
-B_M13 = pickle.load(pkl_file)
+pkl_file = open('B_M12.pkl', 'rb')
+B_M12 = pickle.load(pkl_file)
 pkl_file.close()
 
 
@@ -86,40 +78,71 @@ class MCMC():
     def __init__(self, kwargs):
         self.kwargs = kwargs
 
-        self.kwargs_temp = kwargs
 
     # Ours.
 
 
     def stellar_mass_per_interval(self, f_con, delta_Mh):
 
+
         fb = 0.15
 
         return f_con * fb * delta_Mh
 
-    def f_con_z(self, z, f0):
+    # Now we have a different f_con:
 
+    def f_con_z(self, z,Mh,Ms):
+
+        kwargs = self.kwargs
+
+        f0 = kwargs["f0"]
+
+        A1 = kwargs["A1"]
+        A2 = kwargs["A2"]
+        A3 = kwargs["A3"]
+        
         z0 = 1
         gamma1 = -3
         gamma2 = 0
 
+        """
+        
+        
         if z > z0:
+
+            print("f_con")
+            print(f0 * ((1 + z) / (1 + z0)) ** gamma1)
             return f0 * ((1 + z) / (1 + z0)) ** gamma1
 
         else:
             return f0 * ((1 + z) / (1 + z0)) ** gamma2
 
-    def input_array(self, z_array, delta_mh_array):
+        
 
-        self.z_array = z_array
-        self.delta_mh_array = delta_mh_array
+        
+        """
+        #print("ZA123")
+        #print(f0,A1,A2,A3,f0*(Mh**A1)*(Ms**A2)*((1.+z)**A3))
+
+
+        mht = kwargs["mht"]
+        mst = kwargs["mst"]
+        
+        if z >z0:
+            return f0*((Mh/mht)**A1)*((Ms/mst)**A2)*((1.+z)**A3)
+        else:
+            return f0*((Mh/mht)**A1)*((Ms/mst)**A2)*((1.+z)**A3)
+
+        
+
+
 
     ## Here comes f_q
 
     def f_q(self, z=None, Mh=None, Ms=None):
 
         # a little tricky..
-        kwargs = self.kwargs_temp
+        kwargs = self.kwargs
         ty = kwargs["ty"]
 
         zc = kwargs["zc"]
@@ -134,6 +157,9 @@ class MCMC():
         sigmag = kwargs["sigmag"]
         alphag = kwargs["alphag"]
 
+
+        # Let's ignore the quenching function for now.
+
         if ty == "redshift":
 
             # since we have non-integer exponent, there are complex numbers
@@ -142,10 +168,21 @@ class MCMC():
             # print(abs(((z-zc)/sigmaz)**alphaz))
 
             #print(abs(((z-zc)/sigmaz)**alphaz))
+
+            return 1
+
+            """
+                    
             if z>zc:
                 return 1
             else:
+                
                 return (exp((z - zc) / sigmaz)) ** alphaz
+
+
+            """
+
+
 
 
 
@@ -167,20 +204,48 @@ class MCMC():
         # return an array of M*
 
         ## kwargs
-        kwargs = self.kwargs_temp
-        f0 = self.kwargs_temp["f0"]
+        kwargs = self.kwargs
+        f0 = self.kwargs["f0"]
 
         z_array = self.z_array
         delta_mh_array = self.delta_mh_array
 
+        # Now M_stellar_interval Mh and M* are just numbers, not arrays.
+
+
+
+
+        # Revert the array
+
+        z_array_inverse = z_array[::-1]
+        delta_mh_array_inverse = delta_mh_array[::-1]
+        Mh_all_reverse = self.Mh_all[::-1]
+
+
+        #### Now we need to input Mh and M* for f_con
+
+        # initial values
+
+
+
+        # Time start at big z, small
+
         M_stellar_interval = []
 
-        #### Add f_q
 
-        for i in range(0, len(z_array)):
-            result = self.stellar_mass_per_interval(f_con=self.f_con_z(z_array[i], f0=f0), delta_Mh=delta_mh_array[i])
 
-            M_stellar_interval.append(result)
+        # intial is from the f_con in Jeremy's  (2)
+        Ms_now = Mh_all_reverse[0] *0.1*0.0045
+
+        for i in range(0,len(z_array_inverse)):
+
+            Mh = Mh_all_reverse[i]
+
+            M_stellar_interval_i = self.stellar_mass_per_interval(f_con=self.f_con_z(z = z_array_inverse[i], Mh=Mh,Ms=Ms_now), delta_Mh=delta_mh_array_inverse[i])
+
+            Ms_now +=M_stellar_interval_i
+
+            M_stellar_interval.append(M_stellar_interval_i)
 
         M_stellar_interval = np.array(M_stellar_interval)
         #### Add f_q
@@ -188,7 +253,7 @@ class MCMC():
 
         cal_fq = np.vectorize(self.f_q)
 
-        f_q_array_temp = np.array(cal_fq(z=z_array))
+        f_q_array_temp = np.array(cal_fq(z=z_array_inverse))
         # print(z_array)
         # print(f_q_array_temp)
         # print(f_q_array_temp.shape,M_stellar_interval.shape)
@@ -203,9 +268,13 @@ class MCMC():
 
         M_stellar = []
 
+        # Now the m_stellar_interval is inversed!!
+
         for j in range(0, len(M_stellar_interval)):
             # attention! small t small a big z: You Use Z in your calculation!
-            M_stellar.append(np.sum(M_stellar_interval[j:]))
+            # And now they are inversed!
+
+            M_stellar.append(np.sum(M_stellar_interval[0:j]))
 
         self.M_stellar = np.array(M_stellar)
         # print(M_stellar_interval)
@@ -215,15 +284,16 @@ class MCMC():
     def calculate_median_us(self):
 
 
-        pkl_file = open('B_M13.pkl', 'rb')
-        B_M13 = pickle.load(pkl_file)
+        # Let's call it B_13 for now
+        pkl_file = open('B_M12.pkl', 'rb')
+        B_M12 = pickle.load(pkl_file)
         pkl_file.close()
 
-        self.B_M13 = B_M13
+        self.B_M12 = B_M12
 
 
         # a little tricky here
-        kwargs = self.kwargs_temp
+        kwargs = self.kwargs
 
         trans = 0.05
 
@@ -247,6 +317,8 @@ class MCMC():
             # calculate M_stellar
 
             M_h = result_i[:, 1]
+
+            self.Mh_all = M_h
             # print(M_h)
 
             delta_Mh = []
@@ -270,12 +342,15 @@ class MCMC():
 
             # read parameters
 
-            self.input_array(z_array=z, delta_mh_array=delta_Mh)
+            self.z_array = z
+            self.delta_mh_array = delta_Mh
 
             # The calculate mass module is different:
             M_stellar = self.calculate_mass()
 
-            fusion = np.c_[z, M_stellar]
+            # Now they are from big z to small z:
+
+            fusion = np.c_[z[::-1], M_stellar]
             # plot
 
             # plt.plot(1/(1+fusion[:,0]),[log10(x) for x in stellar_mass],"k",alpha=alpha,linewidth=1)
@@ -301,11 +376,19 @@ class MCMC():
         # print(result_all.shape)
 
         # since all of them are from Main branch, it's okay to do this
-        target = z_target
+        target = z_target[::-1]
 
         target = list(set(target))
 
         M_stellar_all = []
+
+        index_z0 = np.where(abs(result_all[:,0]-target[-1])<0.01)
+
+        index_z0 = np.array(index_z0).ravel()
+
+        M_stellar_z0 = result_all[:, 1][index_z0]
+
+        self.M_stellar_z0 = M_stellar_z0
 
         for i in range(0, len(target)):
             # print("Doing %.2f %%" % (i / len(target) * 100))
@@ -352,7 +435,7 @@ class MCMC():
         a_us = np.array(a_us, dtype=float)
         m_us = np.array(m_us, dtype=float)
 
-        target = self.B_M13[:, 0]
+        target = self.B_M12[:, 0]
         index_us = []
 
         for mk in range(0, len(target)):
@@ -370,111 +453,23 @@ class MCMC():
         # give a chi-squared
 
 
-        m_Behroozi = np.array(self.B_M13[:, 1]).ravel()
+        m_Behroozi = np.array(self.B_M12[:, 1]).ravel()
         m_us_chi = np.array(m_us_chi).ravel()
+
+        self.a_us = a_us
+        self.m_us = m_us
+        self.a_Behroozi = np.array(self.B_M12[:, 0]).ravel()
 
         self.m_Behroozi = m_Behroozi
         self.m_us_chi = m_us_chi
 
         self.chi_temp = np.sum((m_Behroozi - m_us_chi) ** 2)
 
+        print("check chi")
+        print(self.chi_temp)
+
         return self.chi_temp
 
-    def do_MCMC(self, step):
-
-        pkl_file = open('B_M13.pkl', 'rb')
-        B_M13 = pickle.load(pkl_file)
-        pkl_file.close()
-
-        self.B_M13 = B_M13
-
-        chi = self.calculate_median_us()
-        temp = np.array([])
-
-        for i in range(0, step):
-
-            print("doing %d" % i)
-
-            """
-
-            # Tricky : Let's do it periodically
-
-            residual = i%4
-
-            if residual==0:
-                self.kwargs_temp["f0"] = np.random.normal(self.kwargs["f0"], 1)
-            elif residual==1:
-                self.kwargs_temp["zc"] = np.random.normal(self.kwargs["zc"], 1)
-
-            elif residual ==2:
-
-                self.kwargs_temp["sigmaz"] = np.random.normal(self.kwargs["sigmaz"], 1)
-            elif residual ==3:
-                self.kwargs_temp["alphaz"] = np.random.normal(self.kwargs["alphaz"], 1)
-
-            """
-
-            self.kwargs_temp["f0"] = np.random.normal(self.kwargs["f0"], 1)
-            self.kwargs_temp["zc"] = np.random.normal(self.kwargs["zc"], 1)
-            self.kwargs_temp["sigmaz"] = np.random.normal(self.kwargs["sigmaz"], 1)
-            self.kwargs_temp["alphaz"] = np.random.normal(self.kwargs["alphaz"], 1)
-
-            # calculate chi-squared_temp
-
-            chi_temp = self.calculate_median_us()
-
-            # if (ratio>r)&(np.isfinite(chi-chi_temp))&(self.kwargs_temp["f0"]>0)&(self.kwargs_temp["f0"]<2)&(self.kwargs_temp["zc"]>0)&(self.kwargs_temp["zc"]<6)&(self.kwargs_temp["sigmaz"]>0)&(self.kwargs_temp["sigmaz"]<5)&(self.kwargs_temp["alphaz"]>0)&(self.kwargs_temp["alphaz"]<5):
-
-            # from model scatter we derive sig
-            sig = 0.215
-            ratio = exp((-chi_temp + chi) / (2 * sig ** 2))
-
-            r = np.random.rand()
-            print(ratio, chi, chi_temp)
-
-            # Let's save the variables for all steps:
-            temp = np.append(temp, self.kwargs)
-
-            output = open('redshift_result_all_M13.pkl', 'wb')
-            pickle.dump(temp, output)
-            output.close()
-
-            #
-
-            if (ratio > r) & (np.isfinite(chi - chi_temp)):
-                self.kwargs = self.kwargs_temp
-                chi = chi_temp
-
-                print(colored("better", "red"))
-                print((np.nanmean(chi)) ** 0.5)
-                print(self.kwargs)
-                # Let's save it:
-
-                output = open('redshift_result_M13.pkl', 'wb')
-                pickle.dump(self.kwargs, output)
-                output.close()
-
-
-
-            else:
-                self.kwargs_temp = self.kwargs
-
-            ## The initial values of these parameters are in kwargs
-
-
-            kwargs = {"f0": None, "zc": None, "sigmaz": None, "alphaz": None, "mhc": None, "msc": None, "sigmah": None,
-                      "sigmag": None, "alphah": None, "alphag": None}
-
-            # Let's do the redshift first:
-
-            kwargs["ty"] = "redshift"
-
-            kwargs["f0"] = 0.34
-            kwargs["zc"] = 3.14
-            kwargs["sigmaz"] = 1.1
-            kwargs["alphaz"] = 2.14
-
-            print(kwargs)
 
 
 
@@ -484,8 +479,10 @@ class MCMC():
 
 ## The initial values of these parameters are in kwargs
 
+# Let's look into f_con and have a new f_con, which are related to z, Mh and M_*. The parameters we use i A1, A2 and A3
 
-kwargs = {"f0":None,"zc":None, "sigmaz": None ,"alphaz":None,"mhc":None,"msc":None,"sigmah":None,"sigmag":None,"alphah":None,"alphag":None}
+
+kwargs = {"A1":None,"A2":None,"A3":None,"f0":None,"mht":None,"mst":None,"zc":None, "sigmaz": None ,"alphaz":None,"mhc":None,"msc":None,"sigmah":None,"sigmag":None,"alphah":None,"alphag":None}
 
 
 # Let's do the redshift first:
@@ -493,11 +490,29 @@ kwargs = {"f0":None,"zc":None, "sigmaz": None ,"alphaz":None,"mhc":None,"msc":No
 kwargs["ty"] = "redshift"
 
 # initial values of kwargs:
+# Now we have f0, A1, A2 and A3
 
-kwargs["f0"] = 0.34
-kwargs["zc"] = 3.14
-kwargs["sigmaz"] = 1.1
-kwargs["alphaz"] = 2.14
+# log f_con = log(f0) + A1*log(M_halo[z]) + A2*log(M_star[z]) + A3*log(1+z)
+#
+
+
+kwargs["f0"] = 0.1
+
+kwargs["A1"] = 0
+kwargs["A2"] = 0
+kwargs["A3"] = -3
+
+kwargs["mht"] = 10**(10)
+kwargs["mst"] = 10**(10)
+
+# Threshold
+
+
+
+
+model = MCMC(kwargs=kwargs)
+model.calculate_median_us()
+
 
 # print(kwargs)
 
@@ -506,7 +521,7 @@ kwargs["alphaz"] = 2.14
 
 # x is the selected redshift from Behroozi 2013, which is 26-27 long.
 
-# y is the data from Behroozi 2013, which is about 26-27 long. You can read them from B_M13.pkl
+# y is the data from Behroozi 2013, which is about 26-27 long. You can read them from B_M12.pkl
 
 # y_err is the scatter of the model, which is set manually
 
@@ -516,25 +531,25 @@ kwargs["alphaz"] = 2.14
 ## Read data:
 
 
-# use M13, read data
+# use M12, read data
 
 
-pkl_file = open('B_M13.pkl', 'rb')
-B_M13 = pickle.load(pkl_file)
+pkl_file = open('B_M12.pkl', 'rb')
+B_M12 = pickle.load(pkl_file)
 pkl_file.close()
 
 
 # x is a, y is logm:
 
-x = B_M13[:,0]
-y = B_M13[:,1]
+x = B_M12[:,0]
+y = B_M12[:,1]
 
 
 # Let's define ln PDF functions:
 
 # Set y_err =  the scatter of the model
 
-yerr = 0.4
+yerr = 0.3
 counter = 0
 
 def lnlike(theta, x, y):
@@ -544,17 +559,19 @@ def lnlike(theta, x, y):
     # introduce our model here.
 
     # Theta is a tuple
-    f0,zc,sigmaz,alphaz = theta
+    f0,A1,A2,A3,mht,mst = theta
 
     kwargs["f0"] = f0
-    kwargs["zc"] = zc
-    kwargs["sigmaz"] = sigmaz
-    kwargs["alphaz"] = alphaz
+    kwargs["A1"] = A1
+    kwargs["A2"] = A2
+    kwargs["A3"] = A3
+
+
+    kwargs["mht"] = mht
+    kwargs["mst"] = mst
 
     counter = counter+1
     print("Doing %d"%counter)
-
-
 
     model = MCMC(kwargs=kwargs)
 
@@ -564,8 +581,6 @@ def lnlike(theta, x, y):
     chi = model.calculate_median_us()
 
     # print(kwargs)
-    print("check chi")
-    print(chi)
 
 
     y_model = model.m_us_chi
@@ -582,9 +597,9 @@ def lnlike(theta, x, y):
 # Set the range of the parameters
 def lnprior(theta):
 
-    f0, zc, sigmaz, alphaz = theta
+    f0, A1, A2, A3,mht,mst = theta
 
-    if 0 < f0 < 2 and 0 < zc < 5 and 0 < sigmaz < 5 and 0 < alphaz < 5:
+    if 0 < f0 < 2 and -5 < A1 < 5 and -5 < A2 < 5 and -5 < A3 < 5 and 10**(8) < mht < 10**(13) and 10**(8) < mst < 10**(13):
         return 0.0
     return -np.inf
 
@@ -613,24 +628,30 @@ def lnprob(theta, x, y):
 nll = lambda *args: -lnlike(*args)
 
 print("doing scipy opt")
-result = op.minimize(nll, [kwargs["f0"],kwargs["zc"],kwargs["sigmaz"],kwargs["alphaz"]], args=(x, y))
+result = op.minimize(nll, [kwargs["f0"],kwargs["A1"],kwargs["A2"],kwargs["A3"],kwargs["mht"],kwargs["mst"]], args=(x, y))
 print("finish doing scipy opt")
 
 print("result x")
 print(result["x"])
-f0,zc,sigmaz,alphaz = result["x"]
+f0,A1,A2,A3,mht,mst = result["x"]
 
 kwargs["f0"] = f0
-kwargs["zc"] = zc
-kwargs["sigmaz"] = sigmaz
-kwargs["alphaz"] = alphaz
+kwargs["A1"] = A1
+kwargs["A2"] = A2
+kwargs["A3"] = A3
 
-output = open('EMCEE_redshift_M13_scipy.pkl', 'wb')
+kwargs["mht"] = mht
+kwargs["mst"] = mst
+
+print("final")
+print(f0,A1,A2,A3,mht,mst)
+
+output = open('EMCEE_new_fcon_M12_scipy.pkl', 'wb')
 pickle.dump(result["x"], output)
 output.close()
 
 
-output = open('kwargs_redshift.pkl', 'wb')
+output = open('kwargs_new_fcon.pkl', 'wb')
 pickle.dump(kwargs, output)
 output.close()
 
@@ -638,36 +659,23 @@ output.close()
 
 ###
 
+
+
 print("doing emcee")
 
 
 # Define the initial condition of the MCMC chain: Position/initial values
 
-ndim, nwalkers = 4, 100
+ndim, nwalkers = 6, 40
 
 # Or you can replace result["x"] with your initial values
 # pos = [result["x"] + 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
 pos = [
-    [kwargs["f0"],kwargs["zc"],kwargs["sigmaz"],kwargs["alphaz"]]+ 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
+    [kwargs["f0"],kwargs["A1"],kwargs["A2"],kwargs["A3"],kwargs["mht"],kwargs["mst"]]+1e-4*np.random.randn(ndim) for i in range(nwalkers)]
 
 # Set up the MCMC chain
 sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(x, y),threads=8)
 
-"""
-
-
-f = open("EMCEE_redshift_M13.dat", "w")
-f.close()
-
-for result in sampler.sample(pos, iterations=500, storechain=False):
-    position = result[0]
-    f = open("EMCEE_redshift_M13.dat", "a")
-    for k in range(position.shape[0]):
-        f.write("{0:4d} {1:s}\n".format(k, " ".join(position[k])))
-    f.close()
-
-
-"""
 print("running MCMC")
 sampler.run_mcmc(pos, 200)
 
@@ -679,9 +687,11 @@ print(result)
 # save it:
 
 
-output = open('EMCEE_redshift_M13.pkl', 'wb')
+output = open('EMCEE_new_fcon_M12.pkl', 'wb')
 pickle.dump(result, output)
 output.close()
+
+
 
 
 

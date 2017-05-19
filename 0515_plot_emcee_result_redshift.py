@@ -261,6 +261,8 @@ class read_and_plot():
         # 1 Halo Mass
         # 5 red shift z
 
+
+
         for halo in range(1, n_halo):
 
             file_i = "output_fulltree" + str(halo) + ".txt"
@@ -346,10 +348,11 @@ class read_and_plot():
             # 68% range of values
 
             array_dex = np.array([log10(x) for x in array])
-            scatter_i = np.std(array_dex)
-            mask_i = (array_dex<np.nanmedian(array_dex)+scatter_i)&(array_dex>np.nanmedian(array_dex)-scatter_i)
+            scatter_i = abs(np.percentile(array_dex,[84])-np.percentile(array_dex,[50]))
+            residual.append(scatter_i)
 
-            residual.extend(array_dex[mask_i]-np.nanmedian(array_dex))
+
+
 
 
             # print(target[i])
@@ -359,7 +362,7 @@ class read_and_plot():
         M_stellar_all = np.array(M_stellar_all)
         residual = np.array(residual).ravel()
 
-        # print(scatter)
+        print(residual)
 
         # Let's do it!
 
