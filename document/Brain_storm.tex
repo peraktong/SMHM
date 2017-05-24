@@ -1,0 +1,175 @@
+\documentclass[ajp]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout mixions. There are lots.
+
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{amsmath, amsthm, amssymb, amsfonts}
+
+\usepackage{dcolumn}% Align table columns on decimal point
+\usepackage{bm}% bold math
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{authblk}
+
+\usepackage{amsmath}
+
+\bibliographystyle{abbrv}
+
+
+%SetFonts
+
+%SetFonts
+
+
+\title{Brain Storm: for $log[M_*] =12 $ Haloes}
+\author[1]{Jason Cao\thanks{jc6933@nyu.edu}}
+\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+\section{Reproduction}
+
+\subsection{Reproduction of redshift-quenching model for $log[M_*] =13 $ Haloes}
+
+\begin{center}
+\includegraphics[width=170mm]{redshift_emcee_M13.png}
+
+\centerline{Fig.1 Stellar mass vs expansion factor with redshift-quenching.}
+
+\end{center}
+
+\section{New Baryon conversion function}
+
+\subsection{What we want to do}
+
+In our former models, $f_{con}$ is just a function of $z$. What if it depends on other parameters (Like $M_h$ and $M_*$) besides $z$?
+
+\subsection{Basic ideas}
+
+\begin{description}
+ \item[1] Ignore the quenching function for now.
+ \item[2] Work on $log[M_*] =12 $ Haloes, which are still forming stars.
+  \item[3] Introduce a Baryon conversion function that not only depends on z.
+ \item[4] Then, find the best-fitting model under the constraint that scatter of log[M*] is smaller than 0.2 at z=0
+
+\end{description}
+
+
+\section{Example 1 -- Jeremy's $f_{con}$}
+
+\subsection{Formula}
+
+% log f_con = log(f0) + A1*log(M_halo[z]/Mh_threshold) + A2*log(M_star[z]/Ms_threshold) + A3*log(1+z)
+
+\begin{equation}
+log[f_{con}(z,M_h, M_*)] = log(f_0) + A_1 \cdot log[{{M_h(z)} \over{M_h^{thr}}}]+ A_2 \cdot log[{{M_*(z)} \over{M_*^{thr}}}] + A_3 \cdot log[1+z]
+\end{equation}
+\bigskip
+
+The explanation of this formula is: We have an initial Baryon conversion function $f_0$. The second and the third term describe the influence of halo mass and stellar mass. I also add $M_h^{thr}$ and $M_*^{thr}$, which are the "threshold" values of halo mass and stellar mass. The reason is simple: We want to eliminate the offset term in $log(f_{con})$. If we do not eliminate this offset, it will influence the values of other terms prominently and they do have physical meanings. This won't be good. Thus, I add these terms.
+But in my fitting, I fixed them at $10^{10}$ to reduce the number of variables.
+
+
+
+
+\subsection{Results without the constraint that $\sigma log[M_*](z=0) <0.2$}
+The best fitting model:
+
+\begin{center}
+\includegraphics[width=170mm]{brain_storm_emcee_M12.png}
+
+\centerline{Stellar mass vs expansion factor without the constraint}
+
+\end{center}
+
+$f_0$ = 1.974, $A_1$ = 1.164, $A_2$ = -2.505, $A_3$ = -11.520
+
+\bigskip
+
+
+Results from MCMC chain is:
+$f_0=1.528^{+0.363}_{-0.736}$, $A_1=0.111^{+0.426}_{-0.309}$, $A_2=0.744^{+0.537}_{-0.380}$, $A_3 = -2.690^{+1.522}_{1.593}$
+
+\subsection{Results with the constraint that $\sigma log[M_*](z=0) <0.2$}
+The best fitting model:
+
+\begin{center}
+\includegraphics[width=170mm]{brain_storm_emcee_M12_constraint.png}
+
+\centerline{Stellar mass vs expansion factor with the constraint that $\sigma log[M_*](z=0) <0.2$}
+
+\end{center}
+
+$f_0$ = 2.008, $A_1$ = 0.610, $A_2$ = -1.881, $A_3$ = -8.213.
+
+$\sigma log[M_*](z=0) =0.144$
+
+\bigskip
+
+Results from MCMC chain is:
+
+
+$f_0=4.795^{+2.994}_{- 3.139}$, $A_1=0.488^{+0.295}_{-0.337}$, $A_2=0.143^{+0.144}_{-0.052}$, $A_3 = -8.689^{+1.986}_{-1.746}$
+
+
+\subsection{Physics}
+
+$f_{con}$, of course, should be related to z, $M_h$ and $M_*$. But how can we relate them. We use power law.
+
+But the problem is our stellar mass grows too fast at the beginning.
+
+Also, it's very tricky to decide how to add the constraint. The very first idea will be simply add it to the likelihood. If scatter >0.2, set log[likelihood] to be -infinite. But this will cause the failure of the scipy fitting.
+\bigskip
+
+Thus, I adopt the following steps.
+
+\begin{description}
+  \item[1] Fit the model without the constraint and find a set of parameters for the best-fitting model. 
+  \item[2] Use these values as initial values and add the constraint. If scatter >0.2, set log[likelihood function] to be -infinite.
+  \item[3] Fit the model. If scipy still can't nail it, we know the parameters around this set of parameters can't give us a scatter <0.2 result. Then, we exclude this set of parameters.
+  \item[4] Repeat step 1 to 3 until we find them. (We already exclude some parameter sets.)
+\end{description}
+\bigskip
+
+I think I need to add the quenching function in the next step and see what happen. Maybe the quenching function can make things better.
+
+
+
+%%% Example 2
+\section{Example 2 -- Logarithmic $f_{con}$}
+
+\subsection{Formula}
+
+% log f_con = log(f0) + A1*log(M_halo[z]/Mh_threshold) + A2*log(M_star[z]/Ms_threshold) + A3*log(1+z)
+
+\begin{equation}
+log[f_{con}(z,M_h, M_*)] = log(f_0) +  log[[log{{M_h(z)} \over{M_h^{thr}}}]^{A1}]+  log[[{{M_*(z)} \over{M_*^{thr}}}]^{A2}] + A3 \cdot log[1+z]
+\end{equation}
+\bigskip
+
+The explanation of this formula is: We have an initial Baryon conversion function $f_0$. The second and the third term describe the influence of halo mass and stellar mass. I also add $M_h^{thr}$ and $M_*^{thr}$, which are the "threshold" values of halo mass and stellar mass. We also need to let $M_h^{thr}$ and $M_*^{thr}$ always be smaller than $M_h$ and $M_*$. Thus, we set them to be $10^{7}M_{\bigodot}$
+
+
+
+\subsection{Physics}
+The basic idea is: At big z, which means the time is small, the baryon conversion rate should almost be a constant. 
+
+$f_con$, of course, should be related to z, $M_h$ and $M_*$. But how can we relate them. I prefer put the exponent outside the logarithm function.
+
+
+
+
+
+Unluckily, the results seem to be bad. I'm still working on it.
+
+
+
+reference
+\bibliography{citation,pubext} 
+
+\end{document}  
