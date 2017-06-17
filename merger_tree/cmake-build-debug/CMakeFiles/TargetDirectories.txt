@@ -1,3 +1,0 @@
-/Users/caojunzhi/Desktop/NYU/Laboratory/My_code/2017.4_9_cosmology/src/merger_tree/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/Users/caojunzhi/Desktop/NYU/Laboratory/My_code/2017.4_9_cosmology/src/merger_tree/cmake-build-debug/CMakeFiles/edit_cache.dir
-/Users/caojunzhi/Desktop/NYU/Laboratory/My_code/2017.4_9_cosmology/src/merger_tree/cmake-build-debug/CMakeFiles/merger_tree.dir
